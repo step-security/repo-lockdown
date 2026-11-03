@@ -24,7 +24,7 @@
     "@octokit/plugin-retry": "^8.1.0",
     "@octokit/plugin-throttling": "^11.0.3",
     "axios": "^1.21.0",
-    "joi": "^18.2.1",
+    "joi": "^18.3.1",
     "lodash.uniqby": "^4.7.0"
   },
   "devDependencies": {
