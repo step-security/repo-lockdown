@@ -300,7 +300,7 @@ it will take a few hours or days to process them all.
 
 Copyright (c) 2019-2026 Armin Sebastian
 
-Copyright (c) 2026 Armin Sebastian
+Copyright (c) 2026 StepSecurity
 
 
 This software is released under the terms of the MIT License.
