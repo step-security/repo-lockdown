@@ -1,6 +1,6 @@
 name: 'Repo Lockdown'
 description: 'Immediately close and lock issues and pull requests'
-author: 'step-security'
+author: 'Armin Sebastian'
 inputs:
   github-token:
     description: 'GitHub access token'
@@ -68,7 +68,7 @@ outputs:
   prs:
     description: 'Pull requests that have been closed or locked, value is a JSON string'
 runs:
-  using: 'node24'
+  using: 'node20'
   main: 'dist/index.js'
 branding:
   icon: 'shield'

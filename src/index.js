@@ -1,63 +1,22 @@
-import {debug, info, setFailed, setOutput, warning} from '@actions/core';
-import {context} from '@actions/github';
+import core from '@actions/core';
+import github from '@actions/github';
 import uniqBy from 'lodash.uniqby';
-import axios from 'axios';
-import fs from 'fs';
-import * as core from '@actions/core';
 
 import {getConfig, getClient} from './utils.js';
 
-async function validateSubscription() {
-  let repoPrivate;
-  const eventPath = process.env.GITHUB_EVENT_PATH;
-  if (eventPath && fs.existsSync(eventPath)) {
-    const payload = JSON.parse(fs.readFileSync(eventPath, "utf8"));
-    repoPrivate = payload?.repository?.private;
-  }
-
-  const upstream = 'dessant/repo-lockdown';
-  const action = process.env.GITHUB_ACTION_REPOSITORY;
-  const docsUrl = 'https://docs.stepsecurity.io/actions/stepsecurity-maintained-actions';
-  core.info('');
-  core.info('\u001b[1;36mStepSecurity Maintained Action\u001b[0m');
-  core.info(`Secure drop-in replacement for ${upstream}`);
-  if (repoPrivate === false) core.info('\u001b[32m\u2713 Free for public repositories\u001b[0m');
-  core.info(`\u001b[36mLearn more:\u001b[0m ${docsUrl}`);
-  core.info('');
-  if (repoPrivate === false) return;
-  const serverUrl = process.env.GITHUB_SERVER_URL || 'https://github.com';
-  const body = { action: action || '' };
-  if (serverUrl !== 'https://github.com') body.ghes_server = serverUrl;
-  try {
-    await axios.post(
-      `https://agent.api.stepsecurity.io/v1/github/${process.env.GITHUB_REPOSITORY}/actions/maintained-actions-subscription`,
-      body, { timeout: 3000 }
-    );
-  } catch (error) {
-    if (axios.isAxiosError(error) && error.response?.status === 403) {
-      core.error(`\u001b[1;31mThis action requires a StepSecurity subscription for private repositories.\u001b[0m`);
-      core.error(`\u001b[31mLearn how to enable a subscription: ${docsUrl}\u001b[0m`);
-      process.exit(1);
-    }
-    core.info('Timeout or API not reachable. Continuing to next step.');
-  }
-}
-
 async function run() {
   try {
-    await validateSubscription();
-
     const config = getConfig();
     const client = getClient(config['github-token']);
 
     const app = new App(config, client);
-    if (['schedule', 'workflow_dispatch'].includes(context.eventName)) {
+    if (github.context.eventName === 'schedule') {
       await app.processBacklog();
     } else {
       await app.processNewThread();
     }
   } catch (err) {
-    setFailed(err);
+    core.setFailed(err);
   }
 }
 
@@ -76,22 +35,22 @@ class App {
     for (const threadType of threadTypes) {
       const threads = await this.lockdown({threadType});
 
-      debug(`Setting output (${threadType}s)`);
+      core.debug(`Setting output (${threadType}s)`);
       if (threads.length) {
         threadsFound = true;
-        setOutput(`${threadType}s`, JSON.stringify(threads));
+        core.setOutput(`${threadType}s`, JSON.stringify(threads));
 
         if (logOutput) {
-          info(`Output (${threadType}s)`);
-          info(JSON.stringify(threads, null, 2));
+          core.info(`Output (${threadType}s)`);
+          core.info(JSON.stringify(threads, null, 2));
         }
       } else {
-        setOutput(`${threadType}s`, '');
+        core.setOutput(`${threadType}s`, '');
       }
     }
 
     if (!threadsFound) {
-      warning(
+      core.warning(
         'All issues and pull requests have been processed. Remove the `schedule` event from the workflow file to avoid unnecessary workflow runs in the future.'
       );
     }
@@ -99,7 +58,7 @@ class App {
 
   async processNewThread() {
     const logOutput = this.config['log-output'];
-    const threadType = context.eventName === 'issues' ? 'issue' : 'pr';
+    const threadType = github.context.eventName === 'issues' ? 'issue' : 'pr';
 
     const processOnly = this.config['process-only'];
     if (processOnly && processOnly !== threadType) {
@@ -108,24 +67,25 @@ class App {
 
     const threads = await this.lockdown({
       threadType,
-      threadData: context.payload.issue || context.payload.pull_request
+      threadData:
+        github.context.payload.issue || github.context.payload.pull_request
     });
 
-    debug(`Setting output (${threadType}s)`);
+    core.debug(`Setting output (${threadType}s)`);
     if (threads.length) {
-      setOutput(`${threadType}s`, JSON.stringify(threads));
+      core.setOutput(`${threadType}s`, JSON.stringify(threads));
 
       if (logOutput) {
-        info(`Output (${threadType}s)`);
-        info(JSON.stringify(threads, null, 2));
+        core.info(`Output (${threadType}s)`);
+        core.info(JSON.stringify(threads, null, 2));
       }
     } else {
-      setOutput(`${threadType}s`, '');
+      core.setOutput(`${threadType}s`, '');
     }
   }
 
   async lockdown({threadType = '', threadData = null} = {}) {
-    const repo = context.repo;
+    const repo = github.context.repo;
 
     const labels = this.config[`${threadType}-labels`];
     const comment = this.config[`${threadType}-comment`];
@@ -166,7 +126,7 @@ class App {
       const issue = {...repo, issue_number: thread.number};
 
       if (comment && (thread.state === 'open' || !skipClosedComment)) {
-        debug(`Commenting (${threadType}: ${thread.number})`);
+        core.debug(`Commenting (${threadType}: ${thread.number})`);
 
         await this.ensureUnlock(
           issue,
@@ -187,7 +147,7 @@ class App {
       }
 
       if (labels) {
-        debug(`Labeling (${threadType}: ${thread.number})`);
+        core.debug(`Labeling (${threadType}: ${thread.number})`);
 
         await this.client.rest.issues.addLabels({
           ...issue,
@@ -196,7 +156,7 @@ class App {
       }
 
       if (close && thread.state === 'open') {
-        debug(`Closing (${threadType}: ${thread.number})`);
+        core.debug(`Closing (${threadType}: ${thread.number})`);
 
         await this.client.rest.issues.update({
           ...issue,
@@ -206,7 +166,7 @@ class App {
       }
 
       if (lock && !thread.locked) {
-        debug(`Locking (${threadType}: ${thread.number})`);
+        core.debug(`Locking (${threadType}: ${thread.number})`);
 
         const params = {...issue};
         if (lockReason) {
@@ -223,7 +183,7 @@ class App {
   }
 
   async searchBacklog(threadType) {
-    const {owner, repo} = context.repo;
+    const {owner, repo} = github.context.repo;
     let query = `repo:${owner}/${repo} is:${threadType}`;
 
     const excludeCreatedBefore =
@@ -240,7 +200,7 @@ class App {
       query += ` ${queryPart}`;
     }
 
-    debug(`Searching (${threadType}s)`);
+    core.debug(`Searching (${threadType}s)`);
 
     const results = [];
 
