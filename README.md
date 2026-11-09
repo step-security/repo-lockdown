@@ -8,15 +8,6 @@ that do not accept issues or pull requests, such as forks and mirrors.
 
 ![](assets/screenshot.png)
 
-## Supporting the Project
-
-The continued development of Repo Lockdown is made possible
-thanks to the support of awesome backers. If you'd like to join them,
-please consider contributing with
-[Patreon](https://armin.dev/go/patreon?pr=repo-lockdown&src=repo),
-[PayPal](https://armin.dev/go/paypal?pr=repo-lockdown&src=repo) or
-[Bitcoin](https://armin.dev/go/bitcoin?pr=repo-lockdown&src=repo).
-
 ## Usage
 
 Create the `repo-lockdown.yml` workflow file in the `.github/workflows`
@@ -307,6 +298,8 @@ it will take a few hours or days to process them all.
 ## License
 
 Copyright (c) 2019-2023 Armin Sebastian
+
+Copyright (c) 2026 StepSecurity
 
 This software is released under the terms of the MIT License.
 See the [LICENSE](LICENSE) file for further information.
