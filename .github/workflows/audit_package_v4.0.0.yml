@@ -1,0 +1,34 @@
+name: NPM Audit Fix Run - v4.0.0
+
+on:
+  workflow_dispatch:
+    inputs:
+      force:
+        description: "Use --force flag for npm audit fix?"
+        required: true
+        type: boolean
+      base_branch:
+        description: "Specify a base branch"
+        required: false
+        default: "v4.0.0-main"
+      node_version:
+        description: "Specify a Node version"
+        required: false
+        default: "24"
+
+  schedule:
+    - cron: "0 0 * * 1"
+
+jobs:
+  audit-fix-v4.0.0:
+    uses: step-security/reusable-workflows/.github/workflows/audit_fix.yml@v1
+    with:
+      force: ${{ inputs.force || false }}
+      base_branch: ${{ inputs.base_branch || 'v4.0.0-main' }}
+      node_version: ${{ inputs.node_version || '24' }}
+
+permissions:
+  contents: write
+  pull-requests: write
+  packages: read
+  issues: write

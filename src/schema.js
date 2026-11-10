@@ -71,7 +71,7 @@ const joiLabels = Joi.alternatives().try(
 );
 
 const schema = Joi.object({
-  'github-token': Joi.string().trim().max(1000),
+  'github-token': Joi.string().trim().max(100),
 
   'exclude-issue-created-before': joiDate.default(''),
 
